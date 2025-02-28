@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Happy Birthday Kira Animation</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    let particles = [];
+    let messageParticles = [];
+    let finalTextPoints = [];
+    let phase = 0;
+    let phaseStartTime;
+    let currentSentence = 0;
+    let sentenceStartTime;
+    let sentenceAlpha = 0;
+    
+    // Messages to display
+    const sentences = [
+      "Each little dot is a memory",
+      "Memory of our interaction",
+      "Some happy, some sad, some beautiful",
+      "But all of them infinitely important"
+    ];
+    
+    const finalMessage = "HAPPY BIRTHDAY KIRA";
+    
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      colorMode(HSB, 360, 100, 100, 1);
+      textAlign(CENTER, CENTER);
+      
+      // Create final message points
+      createFinalTextPoints();
+      
+      // Phase 0: Start with no particles
+      phaseStartTime = millis();
+      sentenceStartTime = millis();
+    }
+    
+    function createFinalTextPoints() {
+      finalTextPoints = [];
+      
+      // Adjust font size based on screen width
+      // Make it smaller for mobile screens
+      let fontSize = min(width / finalMessage.length * 1.5, height / 4);
+      
+      // Further reduce size on small screens
+      if (width < 600) {
+        fontSize = min(width / (finalMessage.length * 0.8), height / 5);
+      }
+      
+      textSize(fontSize);
+      let textW = textWidth(finalMessage);
+      
+      // Position text in center
+      let startX = width/2 - textW/2;
+      let startY = height/2;
+      
+      // Create a grid for the text
+      // Reduce grid density on small screens
+      const gridSize = fontSize / (width < 600 ? 6 : 10);
+      let letterSpacing = fontSize * 0.6;
+      let currentX = startX;
+      
+      for (let i = 0; i < finalMessage.length; i++) {
+        let char = finalMessage.charAt(i);
+        
+        if (char !== " ") {
+          // Define letter width
+          let letterWidth = letterSpacing;
+          let letterHeight = fontSize;
+          
+          // Calculate grid points for each letter
+          let columnCount = floor(letterWidth / gridSize);
+          let rowCount = floor(letterHeight / gridSize);
+          
+          let letterStartX = currentX;
+          let letterStartY = startY - letterHeight/2;
+          
+          // Create points based on letter shapes
+          createLetterShape(char, letterStartX, letterStartY, letterWidth, letterHeight, gridSize);
+        }
+        
+        // Move to next letter position
+        currentX += letterSpacing;
+        if (char === " ") {
+          currentX += letterSpacing * 0.5; // Extra space for spaces
+        }
+      }
+    }
+    
+    function createLetterShape(letter, x, y, width, height, gridSize) {
+      const pointsX = ceil(width / gridSize);
+      const pointsY = ceil(height / gridSize);
+      
+      // Use different patterns for different letters
+      switch(letter) {
+        case 'H':
+          // Two vertical lines + horizontal middle
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x, y: y + iy * gridSize});
+            finalTextPoints.push({x: x + width - gridSize, y: y + iy * gridSize});
+          }
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height/2});
+          }
+          break;
+          
+        case 'A':
+          // Two diagonal lines + horizontal bar
+          for (let iy = 0; iy < pointsY; iy++) {
+            let progress = iy / (pointsY - 1);
+            let xOffset = width/2 * progress;
+            finalTextPoints.push({x: x + width/2 - xOffset, y: y + iy * gridSize});
+            finalTextPoints.push({x: x + width/2 + xOffset, y: y + iy * gridSize});
+          }
+          // Horizontal bar
+          for (let ix = 1; ix < pointsX-1; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height * 0.6});
+          }
+          break;
+          
+        case 'P':
+          // Vertical line + rounded right
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x, y: y + iy * gridSize});
+          }
+          // Top half curve
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y});
+          }
+          finalTextPoints.push({x: x + width - gridSize, y: y + gridSize});
+          finalTextPoints.push({x: x + width - gridSize, y: y + height * 0.3});
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height * 0.4});
+          }
+          break;
+          
+        case 'Y':
+          // Y shape (fork at top, vertical line bottom)
+          for (let i = 0; i <= pointsY/2; i++) {
+            let progress = i / (pointsY/2);
+            finalTextPoints.push({x: x + progress * width/2, y: y + i * gridSize});
+            finalTextPoints.push({x: x + width - progress * width/2, y: y + i * gridSize});
+          }
+          // Vertical stem
+          for (let iy = pointsY/2; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x + width/2, y: y + iy * gridSize});
+          }
+          break;
+          
+        case 'B':
+          // Vertical line + two curves
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x, y: y + iy * gridSize});
+          }
+          // Top curve
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y});
+          }
+          finalTextPoints.push({x: x + width - gridSize, y: y + gridSize});
+          finalTextPoints.push({x: x + width - gridSize, y: y + height * 0.3});
+          // Middle
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height * 0.5});
+          }
+          // Bottom curve
+          finalTextPoints.push({x: x + width - gridSize, y: y + height * 0.7});
+          finalTextPoints.push({x: x + width - gridSize, y: y + height - gridSize});
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height});
+          }
+          break;
+          
+        case 'I':
+          // Vertical line
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x + width/2, y: y + iy * gridSize});
+          }
+          break;
+          
+        case 'R':
+          // Vertical line + top curve + diagonal leg
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x, y: y + iy * gridSize});
+          }
+          // Top curve
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y});
+          }
+          finalTextPoints.push({x: x + width - gridSize, y: y + gridSize});
+          finalTextPoints.push({x: x + width - gridSize, y: y + height * 0.3});
+          // Middle
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height * 0.4});
+          }
+          // Diagonal leg
+          for (let i = 0; i < pointsY/2; i++) {
+            let progress = i / (pointsY/2);
+            finalTextPoints.push({
+              x: x + width/2 + progress * width/2, 
+              y: y + height/2 + i * gridSize * 2
+            });
+          }
+          break;
+          
+        case 'T':
+          // Horizontal top + vertical stem
+          for (let ix = 0; ix < pointsX; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y});
+          }
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x + width/2, y: y + iy * gridSize});
+          }
+          break;
+          
+        case 'D':
+          // Vertical line + curve
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x, y: y + iy * gridSize});
+          }
+          // Top
+          for (let ix = 0; ix < pointsX-1; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y});
+          }
+          // Right curve
+          for (let iy = 1; iy < pointsY-1; iy++) {
+            finalTextPoints.push({x: x + width - gridSize, y: y + iy * gridSize});
+          }
+          // Bottom
+          for (let ix = 0; ix < pointsX-1; ix++) {
+            finalTextPoints.push({x: x + ix * gridSize, y: y + height - gridSize});
+          }
+          break;
+          
+        case 'K':
+          // Vertical line + diagonal arms
+          for (let iy = 0; iy < pointsY; iy++) {
+            finalTextPoints.push({x: x, y: y + iy * gridSize});
+          }
+          // Top diagonal
+          for (let i = 0; i < pointsY/2; i++) {
+            let progress = i / (pointsY/2);
+            finalTextPoints.push({
+              x: x + progress * width, 
+              y: y + height/2 - i * gridSize * 2
+            });
+          }
+          // Bottom diagonal
+          for (let i = 0; i < pointsY/2; i++) {
+            let progress = i / (pointsY/2);
+            finalTextPoints.push({
+              x: x + progress * width, 
+              y: y + height/2 + i * gridSize * 2
+            });
+          }
+          break;
+          
+        default:
+          // Default rectangle for any other character
+          for (let iy = 0; iy < pointsY; iy++) {
+            for (let ix = 0; ix < pointsX; ix++) {
+              finalTextPoints.push({x: x + ix * gridSize, y: y + iy * gridSize});
+            }
+          }
+      }
+    }
+    
+    function addParticle() {
+      // Add a single particle with random properties
+      let hue = random(360);
+      particles.push({
+        position: createVector(random(width), random(height)),
+        size: random(2, 6),
+        color: color(hue, 70, 100, 0.8),
+        velocity: createVector(random(-0.5, 0.5), random(-0.5, 0.5)),
+        hue: hue
+      });
+    }
+    
+    function draw() {
+      background(0, 0.1); // Slightly transparent background for trails
+      
+      // Current time
+      let currentTime = millis();
+      
+      // Phase transitions - adjust particle counts for screen size
+      let maxParticles = width < 600 ? 400 : 800;
+      let finalParticles = width < 600 ? 500 : 1000;
+      
+      if (phase === 0 && particles.length >= maxParticles) {
+        phase = 1; // Move to message phase
+        phaseStartTime = currentTime;
+        sentenceStartTime = currentTime;
+      } else if (phase === 1 && currentSentence >= sentences.length) {
+        phase = 2; // Move to full screen dots phase
+        phaseStartTime = currentTime;
+      } else if (phase === 2 && currentTime - phaseStartTime > 3000) {
+        phase = 3; // Move to final explosion phase
+        phaseStartTime = currentTime;
+        
+        // Clear background particles to make room for text particles
+        particles = [];
+        
+        // Create particles for final text
+        messageParticles = [];
+        for (let i = 0; i < finalTextPoints.length; i++) {
+          messageParticles.push({
+            position: createVector(random(width), random(height)),
+            target: createVector(finalTextPoints[i].x, finalTextPoints[i].y),
+            size: random(3, 6),
+            color: color(random(360), 80, 100, 0.9),
+            placed: false,
+            delay: random(500, 1500)
+          });
+        }
+      }
+      
+      // Phase 0: Dots slowly appearing
+      if (phase === 0) {
+        // Add new particles at a controlled rate
+        if (frameCount % 2 === 0 && particles.length < maxParticles) {
+          addParticle();
+        }
+        
+        // Update existing particles
+        for (let i = 0; i < particles.length; i++) {
+          let p = particles[i];
+          // Gentle movement
+          p.position.add(p.velocity);
+          
+          // Wrap around screen edges
+          if (p.position.x < 0) p.position.x = width;
+          if (p.position.x > width) p.position.x = 0;
+          if (p.position.y < 0) p.position.y = height;
+          if (p.position.y > height) p.position.y = 0;
+          
+          // Display particle
+          noStroke();
+          fill(p.color);
+          ellipse(p.position.x, p.position.y, p.size);
+        }
+      }
+      
+      // Phase 1: Messages appearing
+      else if (phase === 1) {
+        // Update sentence transition
+        let sentenceTime = currentTime - sentenceStartTime;
+        
+        if (sentenceTime < 1000) {
+          // Fade in
+          sentenceAlpha = map(sentenceTime, 0, 1000, 0, 1);
+        } else if (sentenceTime < 3500) {
+          // Hold
+          sentenceAlpha = 1;
+        } else if (sentenceTime < 4500) {
+          // Fade out
+          sentenceAlpha = map(sentenceTime, 3500, 4500, 1, 0);
+        } else {
+          // Next sentence
+          currentSentence++;
+          sentenceStartTime = currentTime;
+          sentenceAlpha = 0;
+        }
+        
+        // Display current sentence
+        if (currentSentence < sentences.length) {
+          textSize(width < 600 ? width * 0.05 : width * 0.04);
+          fill(255, sentenceAlpha * 255);
+          text(sentences[currentSentence], width/2, height/2);
+        }
+        
+        // Update particles similar to phase 0
+        for (let i = 0; i < particles.length; i++) {
+          let p = particles[i];
+          p.position.add(p.velocity);
+          
+          if (p.position.x < 0) p.position.x = width;
+          if (p.position.x > width) p.position.x = 0;
+          if (p.position.y < 0) p.position.y = height;
+          if (p.position.y > height) p.position.y = 0;
+          
+          noStroke();
+          fill(p.color);
+          ellipse(p.position.x, p.position.y, p.size);
+        }
+      }
+      
+      // Phase 2: Screen filled with more particles
+      else if (phase === 2) {
+        // Add even more particles
+        if (particles.length < finalParticles && frameCount % 2 === 0) {
+          addParticle();
+        }
+        
+        // Update particles
+        for (let i = 0; i < particles.length; i++) {
+          let p = particles[i];
+          p.position.add(p.velocity);
+          
+          if (p.position.x < 0) p.position.x = width;
+          if (p.position.x > width) p.position.x = 0;
+          if (p.position.y < 0) p.position.y = height;
+          if (p.position.y > height) p.position.y = 0;
+          
+          noStroke();
+          fill(p.color);
+          ellipse(p.position.x, p.position.y, p.size);
+        }
+      }
+      
+      // Phase 3: Explosion and final text
+      else if (phase === 3) {
+        // Slowly fade out any remaining background particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+          let p = particles[i];
+          
+          // Directional explosion from center
+          let centerDir = p5.Vector.sub(p.position, createVector(width/2, height/2));
+          centerDir.normalize();
+          centerDir.mult(3);
+          p.velocity.add(centerDir);
+          p.velocity.mult(1.02); // Accelerate outward
+          p.position.add(p.velocity);
+          
+          // Fade out the particle
+          p.color.setAlpha(max(0, p.color._array[3] - 0.01));
+          
+          // Display particle
+          noStroke();
+          fill(p.color);
+          ellipse(p.position.x, p.position.y, p.size);
+          
+          // Remove completely faded particles
+          if (p.color._array[3] <= 0.01) {
+            particles.splice(i, 1);
+          }
+        }
+        
+        // Update and display message particles
+        let anyMoving = false;
+        for (let i = 0; i < messageParticles.length; i++) {
+          let p = messageParticles[i];
+          
+          // Check if it's time for this particle to move to position
+          let particleTime = currentTime - phaseStartTime;
+          
+          if (particleTime > p.delay) {
+            if (!p.placed) {
+              let dir = p5.Vector.sub(p.target, p.position);
+              let distance = dir.mag();
+              
+              if (distance < 2) {
+                p.position = p.target.copy();
+                p.placed = true;
+              } else {
+                anyMoving = true;
+                dir.normalize();
+                dir.mult(min(distance * 0.1, 5));
+                p.position.add(dir);
+              }
+            }
+            
+            // Display the message particle
+            noStroke();
+            fill(p.color);
+            ellipse(p.position.x, p.position.y, p.size);
+          }
+        }
+        
+        // If all message particles are in place, add subtle animation
+        if (!anyMoving) {
+          for (let i = 0; i < messageParticles.length; i++) {
+            let p = messageParticles[i];
+            // Slight wobble for final text
+            p.position.x = p.target.x + sin(frameCount * 0.05 + i * 0.1) * 1;
+            p.position.y = p.target.y + cos(frameCount * 0.05 + i * 0.2) * 1;
+          }
+        }
+      }
+    }
+    
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+      createFinalTextPoints();
+      // Reset animation
+      particles = [];
+      messageParticles = [];
+      phase = 0;
+      currentSentence = 0;
+      phaseStartTime = millis();
+      sentenceStartTime = millis();
+    }
+  </script>
+</body>
+</html>
